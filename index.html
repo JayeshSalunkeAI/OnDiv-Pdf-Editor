@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OnDiv PDF Editor — Edit, Redact &amp; OCR PDFs in Your Browser</title>
+    <meta
+      name="description"
+      content="OnDiv PDF Editor lets you edit text, permanently redact sensitive content, OCR scanned pages and export searchable PDFs — entirely in your browser. No uploads, no sign-up."
+    />
+    <meta
+      name="keywords"
+      content="PDF editor, edit PDF in browser, redact PDF, OCR PDF, searchable PDF, private PDF editor, free PDF editor"
+    />
+    <meta name="application-name" content="OnDiv PDF Editor" />
+    <meta name="apple-mobile-web-app-title" content="OnDiv PDF Editor" />
+    <meta name="author" content="OnDiv" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow" />
+    <meta name="theme-color" content="#0a0d13" />
+    <meta name="color-scheme" content="dark" />
+
+    <link rel="canonical" href="__SITE_URL__/" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="OnDiv PDF Editor" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:title" content="OnDiv PDF Editor — Edit, Redact &amp; OCR PDFs in Your Browser" />
+    <meta
+      property="og:description"
+      content="Edit text, permanently redact sensitive content, OCR scans and export searchable PDFs without uploading your files. Free and private."
+    />
+    <meta property="og:url" content="__SITE_URL__/" />
+    <meta property="og:image" content="__SITE_URL__/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="OnDiv PDF Editor — private PDF editing in your browser" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="OnDiv PDF Editor — Edit, Redact &amp; OCR PDFs in Your Browser" />
+    <meta
+      name="twitter:description"
+      content="Edit text, permanently redact sensitive content, OCR scans and export searchable PDFs without uploading your files. Free and private."
+    />
+    <meta name="twitter:image" content="__SITE_URL__/og-image.png" />
+    <meta name="twitter:image:alt" content="OnDiv PDF Editor — private PDF editing in your browser" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebApplication",
+            "@id": "__SITE_URL__/#app",
+            "name": "OnDiv PDF Editor",
+            "url": "__SITE_URL__/",
+            "description": "Private, browser-based PDF editor for native and scanned documents. Edit text, permanently redact sensitive content, OCR pages and export searchable PDFs without uploading files.",
+            "applicationCategory": "ProductivityApplication",
+            "applicationSubCategory": "PDF Editor",
+            "operatingSystem": "Any",
+            "browserRequirements": "Requires a modern browser with JavaScript enabled.",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD"
+            },
+            "featureList": [
+              "Edit PDF text in the browser",
+              "Permanently redact sensitive content",
+              "OCR scanned PDF pages",
+              "Export searchable PDFs",
+              "Local, on-device processing"
+            ],
+            "screenshot": "__SITE_URL__/og-image.png",
+            "publisher": {
+              "@type": "Organization",
+              "name": "OnDiv",
+              "url": "__SITE_URL__/"
+            }
+          },
+          {
+            "@type": "FAQPage",
+            "@id": "__SITE_URL__/#faq",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "Do my PDFs get uploaded?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "No. OnDiv PDF Editor processes files inside your browser tab. Your document is never uploaded to a server. The OCR engine and language data are downloaded from a CDN the first time you use OCR, but the PDF itself stays on your device."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Can I edit a scanned PDF?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes. OCR turns the page image into editable text lines. When you export with searchable OCR enabled, the scan keeps its appearance and gains a selectable, searchable text layer."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Is redaction permanent?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes. The Redact tool flattens affected pages into images inside a freshly rebuilt PDF, removes annotations and document metadata, and verifies on export that no extractable text still overlaps a redaction box. The Cover tool is visual only."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Which browsers are supported?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "OnDiv PDF Editor works in current versions of Chrome, Edge, Firefox and Safari. Performance is best in Chrome or Edge. Password-protected PDFs and pages with a rotation entry are not supported yet."
+                }
+              }
+            ]
+          }
+        ]
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>
+      <div
+        style="
+          min-height: 100vh;
+          margin: 0;
+          display: grid;
+          place-items: center;
+          padding: 32px;
+          background: #090c12;
+          color: #d8e1ef;
+          font-family: Segoe UI, Arial, sans-serif;
+          text-align: center;
+        "
+      >
+        <div style="max-width: 640px">
+          <h1 style="font-size: 32px; margin: 0 0 14px">OnDiv PDF Editor</h1>
+          <p style="line-height: 1.6; color: #94a2b8; margin: 0">
+            Edit text, permanently redact sensitive content, OCR scanned pages and export
+            searchable PDFs without uploading your files. Enable JavaScript to open the editor.
+          </p>
+        </div>
+      </div>
+    </noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
