@@ -1,8 +1,9 @@
 # OnDiv PDF Editor
 
-A browser-only PDF editor for real documents, including scans. Open a PDF, replace text, add
-text, cover what should not be there, securely redact what must be destroyed, OCR image-only
-pages, and export a flattened PDF. The PDF never leaves the tab; there is no application server.
+A browser-only PDF editor for real documents, including scans. Open a PDF, edit text word by
+word or line by line, add text, cover what should not be there, securely redact what must be
+destroyed, OCR image-only pages, and export a clean PDF with matched fonts. The PDF never leaves
+the tab; there is no application server.
 
 Built with React 19, Vite 8, PDF.js 6, pdf-lib, Tesseract.js, and Zustand.
 
@@ -94,14 +95,15 @@ redeploy so the canonical, Open Graph, and sitemap URLs match. Finally, submit
 | --- | --- |
 | Open | Drag and drop, file picker, or sample PDF. Encrypted PDFs show a clear error. |
 | Render | PDF.js renders the page to a canvas with a selectable PDF.js text layer. |
-| Replace text | **Edit text** turns native text lines into clickable targets. Editing a line paints a paper-coloured mask over the original glyphs and draws replacement text on top. |
+| Replace text | **Edit text** turns native text into clickable words and lines. Click a word to replace only that word; click line whitespace to replace the whole line. The inline editor exposes **B**, **I**, and **U** toggles so detected styling can be corrected before committing. |
+| Fonts | The page's typeface is matched to a bundled metric-compatible family — Liberation Sans, Carlito, Tinos, Caladea, or Cousine. Replacements embed the matching face (and its bold/italic variant) so the export keeps the document's look. |
 | Add text | **Add text** places a new text box anywhere on the page. |
 | Cover | **Cover** drags a background-coloured rectangle over a region (visual cover, not secure redaction). |
 | Redact | **Redact** drags a solid black box. On export the whole page is rasterized at up to 300 DPI, rebuilt into a fresh PDF, stripped of metadata/annotations, and verified. Underlying text and images are destroyed. |
-| Scanned pages | **OCR page** rasterizes the page, runs Tesseract.js in a worker, and turns OCR lines into editing targets. |
-| Searchable export | OCR lines are written back as invisible (`opacity: 0`) text, so the scan looks unchanged but is searchable and copyable. Lines that touch a cover or redaction are omitted. |
+| Scanned pages | **OCR page** rasterizes the page, runs Tesseract.js in a worker, and turns OCR words into editing targets. Bold detection compares each word's stroke core against a page-wide adaptive cutoff, so mixed bold/regular lines are handled per word. |
+| Searchable export | OCR words are written back individually as invisible (`opacity: 0`) text, so the scan looks unchanged but is searchable and copyable. Lines that touch a cover or redaction are omitted. |
 | Undo/redo | 50-step history, with coalescing for drags and slider-like edits. |
-| Export | Normal export paints masks and replacement text into a copy of the original PDF. If any secure redaction exists, the document is rebuilt from scratch instead. The original file is never modified. |
+| Export | Normal export paints masks and replacement text into a copy of the original PDF, embedding the matched font and fitting a longer word replacement into its available space. If any secure redaction exists, the document is rebuilt from scratch instead. The original file is never modified. |
 | Privacy | PDF bytes and edits live in browser memory. No upload endpoint, no storage bucket, no account. |
 
 Keyboard shortcuts: `V` select, `T` edit text, `A` add text, `W` cover, `R` redact, `O` OCR current page,
@@ -123,8 +125,12 @@ src/
   lib/
     pdf.ts               PDF.js loading, text-line extraction, page rasterization
     color.ts             samples paper/ink colours from the rendered page
-    ocr.ts               Tesseract worker lifecycle and line/word parsing
+    ocr.ts               Tesseract worker lifecycle, word parsing, adaptive bold cutoff
+    ocr-style.ts         stroke-core bold scoring, italic/underline/colour analysis
+    fonts.ts             bundled faces, font matching, preview/export font loading
     export.ts            overlay export + destructive secure-redaction rebuild
+  assets/
+    fonts/               bundled Liberation, Carlito, Tinos, Caladea and Cousine faces
 scripts/
   copy-pdfjs-assets.mjs   copies PDF.js runtime assets into public/pdfjs
   make-seo.mjs            generates robots.txt and sitemap.xml from VITE_SITE_URL
@@ -135,21 +141,24 @@ public/
   sitemap.xml             canonical URL list for Google Search Console
   site.webmanifest        install metadata and app icons
   og-image.png            social sharing card (1200 × 630)
+  fonts/licenses/         licences for the bundled font families
   pdfjs/                  copied PDF.js runtime assets
 ```
 
 ## How it works in one paragraph
 
 The original PDF is immutable. Edits are `Patch` records in PDF-point coordinates (top-left
-origin): cover rectangles, secure-redaction rectangles, and text boxes. The UI renders the
-original page with PDF.js and draws the patches as HTML overlays. Normal export loads the
-original bytes with pdf-lib, paints the masks, draws the replacement text with standard fonts,
-and — for scanned pages — adds an invisible, line-level OCR text layer. A secure redaction
-switches to a destructive path: the composed page is rendered to an image, a fresh PDF is built,
-and the output is reopened to prove that no extractable text still intersects a redaction box.
-This "original + overlay" model is what makes undo, redraw, and ordinary export simple, while
-the rebuild path makes removal verifiable. See [ARCHITECTURE.md](ARCHITECTURE.md) for the full
-design, coordinate math, and the hard problems a production editor must solve.
+origin): cover rectangles, secure-redaction rectangles, and text boxes. A text patch can target a
+whole line or a single word (`lineId` + `wordId`). The UI renders the original page with PDF.js
+and draws the patches as HTML overlays; clicking a word opens a word-sized editor, while clicking
+line whitespace opens a line editor. Normal export loads the original bytes with pdf-lib, paints
+the masks, draws the replacement text with the matched embedded font, and — for scanned pages —
+adds an invisible, word-level OCR text layer. A secure redaction switches to a destructive path:
+the composed page is rendered to an image, a fresh PDF is built, and the output is reopened to
+prove that no extractable text still intersects a redaction box. This "original + overlay" model
+is what makes undo, redraw, and ordinary export simple, while the rebuild path makes removal
+verifiable. See [ARCHITECTURE.md](ARCHITECTURE.md) for the full design, coordinate math, and the
+hard problems a production editor must solve.
 
 ## Limits you should know about
 
@@ -165,10 +174,18 @@ These are deliberate boundaries, not hidden behaviour:
   OCR text restores searchability only outside the boxes, and only when searchable export is
   enabled. The export reopens the result and fails if extractable text still intersects a
   redaction box.
-- **Text edits are line-level.** The editor replaces a whole extracted line. It does not edit
-  individual glyphs inside a paragraph or reflow surrounding text.
-- **Standard fonts only.** Export uses Helvetica/Times/Courier with WinAnsi sanitization. Text
-  outside Latin-1 is replaced with `?`; there is no font embedding or original-font matching.
+- **Text edits are word- or line-level.** Clicking a word replaces that word only; clicking line
+  whitespace replaces the whole line. The editor does not edit individual glyphs or reflow the
+  surrounding paragraph. A longer word replacement shrinks to fit the available space so it cannot
+  overlap its neighbour.
+- **Fonts are matched, not copied.** Export maps the page to one of five bundled metric-compatible
+  families (Liberation Sans, Carlito, Tinos, Caladea, Cousine) and embeds the closest face. The
+  exact original typeface is not extracted from the source PDF, and unusual, CJK, Arabic, or
+  Indic fonts fall back to a bundled face or standard PDF font; unsupported characters become `?`.
+- **Bold detection is a heuristic.** OCR scores each word's stroke core and compares it with a
+  page-wide cutoff. It handles mixed bold/regular lines well on ordinary documents, but scans with
+  very light ink or unusual typefaces can be misclassified. Use the **B/I/U** toggles in the inline
+  editor to correct a word before committing.
 - **Rotated pages are read-only for edits.** PDF.js renders them correctly, but overlays use an
   unrotated coordinate system. Export refuses patches on `/Rotate` pages and skips OCR on them.
 - **Encrypted PDFs are not supported.**
@@ -181,13 +198,15 @@ These are deliberate boundaries, not hidden behaviour:
 
 ## Verification
 
-`npm run build` runs TypeScript and the production bundle. A headless Chrome end-to-end pass has
-covered: sample open, line replacement, add text, cover drag, undo/redo, OCR of the scanned page,
-export, re-opening the exported PDF, native text-layer inspection, and OCR text-layer extraction.
-The exported scan keeps its pixels while its OCR lines are selectable and searchable. A separate
-secure-redaction pass covers black-box preview, export of a flattened and rebuilt PDF, absence of
-the redacted string from the exported text layer, metadata/annotation stripping, and the
-fail-closed verification step.
+`npm run build` runs TypeScript and the production bundle. Headless Chrome end-to-end passes
+cover: sample open, word and line replacement, B/I/U correction, add text, cover drag, undo/redo,
+OCR of the scanned page, export, re-opening the exported PDF, native text-layer inspection, and
+OCR text-layer extraction. Word patches are checked to stay on one line, keep the original
+baseline, and preserve a gap before the next word; the exported font is checked to contain a
+valid embedded subset. The exported scan keeps its pixels while its OCR words are selectable and
+searchable. Separate secure-redaction and crop-box passes cover black-box preview, flattened and
+rebuilt output, absence of the redacted string from the exported text layer,
+metadata/annotation stripping, and the fail-closed verification step.
 
 ## Stack and licences
 
@@ -196,5 +215,7 @@ fail-closed verification step.
 - Tesseract.js — Apache-2.0; language data licences vary by model, check the tessdata source
 - React, Vite, Zustand — MIT
 - lucide-react — ISC
+- Bundled fonts — Liberation Sans (GPLv2 with font exception); Carlito, Tinos, Caladea and
+  Cousine (SIL OFL 1.1). Licence texts are in `public/fonts/licenses/`.
 
 This build is a starting point, not a certified redaction or PDF/A tool.

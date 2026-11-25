@@ -19,7 +19,7 @@ const features = [
   {
     icon: ScanText,
     title: 'Scanned pages',
-    copy: 'OCR turns page images into editable, searchable text.',
+    copy: 'OCR turns page images into editable words and lines, with bold detection you can correct.',
   },
   {
     icon: ShieldX,
@@ -29,7 +29,7 @@ const features = [
   {
     icon: FileDown,
     title: 'Searchable export',
-    copy: 'Download a clean PDF with your edits and an invisible OCR layer.',
+    copy: 'Download a clean PDF with your edits, matched fonts, and an invisible OCR layer.',
   },
 ]
 
@@ -42,7 +42,7 @@ const faqs = [
   {
     question: 'Can I edit a scanned PDF?',
     answer:
-      'Yes. OCR turns the page image into editable text lines. When you export with searchable OCR enabled, the scan keeps its appearance and gains a selectable, searchable text layer.',
+      'Yes. OCR turns the page image into editable words and lines. Click a word to change just that word, or click the whitespace to edit the whole line. Bold detection marks likely bold words, and the B/I/U toggles let you correct it. Export with searchable OCR enabled to keep the scan’s appearance and add a selectable, searchable text layer.',
   },
   {
     question: 'Is redaction permanent?',
@@ -87,8 +87,9 @@ export function Landing({
         </h1>
         <p className="landing-lede">
           OnDiv PDF Editor is a private PDF workbench for real documents — including scans.
-          Fix the text, permanently redact sensitive content, OCR the image-only pages, then
-          export a clean, searchable PDF. Everything happens in this tab.
+          Edit a single word or a whole line, correct bold and italic styling, permanently redact
+          sensitive content, OCR the image-only pages, then export a clean, searchable PDF that
+          keeps the document’s fonts. Everything happens in this tab.
         </p>
 
         <div className="drop-zone">

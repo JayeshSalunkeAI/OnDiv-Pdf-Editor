@@ -60,7 +60,10 @@ interface EditorState {
   markFitted: () => void
   setPageSize: (size: PageSize) => void
   setTool: (tool: Tool) => void
-  addPatch: (patch: Omit<Patch, 'id' | 'createdAt'>) => Patch
+  addPatch: (
+    patch: Omit<Patch, 'id' | 'createdAt'>,
+    options?: { replaceLineId?: string },
+  ) => Patch
   updatePatch: (id: string, updates: Partial<Patch>, key?: string) => void
   deletePatch: (id: string) => void
   selectPatch: (id: string | null) => void
@@ -233,13 +236,18 @@ export const useEditor = create<EditorState>()((set, get) => {
 
     setTool: (tool) => set({ tool }),
 
-    addPatch: (patch) => {
+    addPatch: (patch, options) => {
       const full: Patch = {
         ...patch,
         id: makeId(),
         createdAt: Date.now(),
       }
-      commitPatches([...get().patches, full], `add:${full.id}`)
+      const base = options?.replaceLineId
+        ? get().patches.filter(
+            (item) => !(item.lineId === options.replaceLineId && item.wordId),
+          )
+        : get().patches
+      commitPatches([...base, full], `add:${full.id}`)
       set({ selectedPatchId: full.id })
       return full
     },
@@ -373,6 +381,7 @@ export const useEditor = create<EditorState>()((set, get) => {
               words: parsed.words,
               fontFace: parsed.fontFace,
               boldLines: parsed.boldLines,
+              boldWords: parsed.boldWords,
               italicLines: parsed.italicLines,
               underlinedLines: parsed.underlinedLines,
               applyTextLayer,

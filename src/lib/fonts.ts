@@ -175,6 +175,28 @@ export function previewFontFamily(kind: FontKind, face?: FontFaceId) {
   return `"${FONT_FACE_BY_ID[face].cssFamily}", ${FALLBACK_STACK[kind]}`
 }
 
+let previewMeasureCanvas: HTMLCanvasElement | null = null
+
+/**
+ * Measures replacement text with the same CSS face used by the page preview.
+ * Word edits use this to grow into following whitespace or shrink to fit.
+ */
+export function measurePreviewTextWidth(
+  text: string,
+  kind: FontKind,
+  face: FontFaceId | undefined,
+  bold: boolean,
+  italic: boolean,
+  size: number,
+) {
+  if (typeof document === 'undefined') return 0
+  if (!previewMeasureCanvas) previewMeasureCanvas = document.createElement('canvas')
+  const ctx = previewMeasureCanvas.getContext('2d')
+  if (!ctx) return 0
+  ctx.font = `${italic ? 'italic ' : ''}${bold ? 700 : 400} ${Math.max(1, size)}px ${previewFontFamily(kind, face)}`
+  return ctx.measureText(text).width
+}
+
 let stylesInjected = false
 
 /** Injects the @font-face rules once. Browsers fetch each file on first use. */

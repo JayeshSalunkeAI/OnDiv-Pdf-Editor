@@ -2,7 +2,7 @@ import * as pdfjs from 'pdfjs-dist'
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { Util } from 'pdfjs-dist'
 import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist'
-import type { FontFaceId, FontKind, TextLine } from '../types'
+import type { FontFaceId, FontKind, TextLine, TextWord } from '../types'
 import { fontFaceFromName, nativeFontStyle } from './fonts'
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
@@ -150,10 +150,52 @@ export async function extractTextLines(page: PDFPageProxy): Promise<TextLine[]> 
     const bottom = Math.max(...group.map((item) => item.bottom))
     const fontSize = group[0].fontSize
     const fontFamily = group[0].fontFamily
-
     const baseline = group[0].baseline
+    const lineId = `native-${page.pageNumber}-${lines.length}`
+    const lineWords: TextWord[] = []
+    let wordIndex = 0
+
+    for (const item of group) {
+      const trimmed = item.text.trim()
+      if (!trimmed) continue
+      const baseOffset = item.text.indexOf(trimmed)
+      const itemWidth = item.right - item.left
+      const tokens = trimmed.match(/\S+/g) ?? []
+      let cursor = 0
+      for (const token of tokens) {
+        const index = trimmed.indexOf(token, cursor)
+        if (index < 0) continue
+        cursor = index + token.length
+        const start = baseOffset + index
+        const end = start + token.length
+        const ratioStart = start / Math.max(1, item.text.length)
+        const ratioEnd = end / Math.max(1, item.text.length)
+        lineWords.push({
+          id: `${lineId}-w${wordIndex++}`,
+          text: token,
+          x: item.left + itemWidth * ratioStart,
+          y: item.top,
+          width: Math.max(1, itemWidth * (ratioEnd - ratioStart)),
+          height: Math.max(1, item.bottom - item.top),
+          lineId,
+          fontSize: item.fontSize,
+          fontFamily: item.fontFamily,
+          fontFace: item.fontFace,
+          bold: item.bold,
+          italic: item.italic,
+          baseline: item.baseline - item.top,
+          source: 'native',
+        })
+      }
+    }
+
+    const bold =
+      lineWords.length > 0
+        ? lineWords.filter((word) => word.bold).length > lineWords.length / 2
+        : group[0].bold
+
     lines.push({
-      id: `native-${page.pageNumber}-${lines.length}`,
+      id: lineId,
       text,
       x: left,
       y: top,
@@ -162,10 +204,11 @@ export async function extractTextLines(page: PDFPageProxy): Promise<TextLine[]> 
       fontSize,
       fontFamily,
       fontFace: group[0].fontFace,
-      bold: group[0].bold,
+      bold,
       italic: group[0].italic,
       baseline: baseline - top,
       source: 'native',
+      words: lineWords.length ? lineWords : undefined,
     })
   }
 

@@ -500,7 +500,7 @@ button:disabled {
 
 .text-line {
   position: absolute;
-  z-index: 3;
+  z-index: 2;
   pointer-events: auto;
   border-radius: 2px;
   cursor: text;
@@ -513,8 +513,28 @@ button:disabled {
 
 .text-line:hover,
 .text-line:focus-visible {
-  background: rgba(91, 140, 255, 0.15);
-  outline-color: rgba(91, 140, 255, 0.7);
+  background: rgba(91, 140, 255, 0.12);
+  outline-color: rgba(91, 140, 255, 0.6);
+}
+
+/* Word targets sit above the line target so a click edits one word. */
+.text-word {
+  position: absolute;
+  z-index: 3;
+  pointer-events: auto;
+  border-radius: 2px;
+  cursor: text;
+  outline: 1px solid rgba(61, 219, 162, 0);
+  outline-offset: 0;
+  transition:
+    background 90ms ease,
+    outline-color 90ms ease;
+}
+
+.text-word:hover,
+.text-word:focus-visible {
+  background: rgba(61, 219, 162, 0.2);
+  outline-color: rgba(61, 219, 162, 0.9);
 }
 
 .patch-mask {
@@ -651,17 +671,54 @@ button:disabled {
   box-shadow: 0 0 0 3px rgba(91, 140, 255, 0.22);
 }
 
-.inline-editor-hint {
-  width: max-content;
-  max-width: 100%;
-  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
-  font-size: 9px;
-  color: #5b6678;
+.inline-editor-tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 3px 5px;
   background: #f1f5fb;
   border: 1px solid #d7e0ee;
   border-top: none;
   border-radius: 0 0 4px 4px;
-  padding: 2px 6px;
+}
+
+.inline-style {
+  width: 22px;
+  height: 20px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid #cfd8e6;
+  border-radius: 3px;
+  background: #fff;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.inline-style.italic {
+  font-style: italic;
+}
+
+.inline-style.underline {
+  text-decoration: underline;
+}
+
+.inline-style.on {
+  background: #5b8cff;
+  border-color: #5b8cff;
+  color: #fff;
+}
+
+.inline-editor-hint {
+  width: max-content;
+  max-width: 100%;
+  margin-left: auto;
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  font-size: 9px;
+  color: #5b6678;
   white-space: nowrap;
 }
 

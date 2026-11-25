@@ -29,7 +29,6 @@ export interface OcrLineStyle {
 }
 
 export interface OcrWordStyle {
-  bold: boolean
   coreRatio: number
 }
 
@@ -203,16 +202,9 @@ export function normalizeInk(mask: InkMask, gridWidth: number, gridHeight: numbe
   return out
 }
 
-/**
- * Fraction of ink pixels that sit in the thick core of a stroke. The cutoff is
- * proportional to the line's cap height, which makes the score independent of
- * the OCR render scale and the document's font size. Bold faces keep a much
- * larger core than regular faces at the same size.
- */
-function coreRatio(mask: InkMask, capHeightPx: number): number {
-  const { mask: ink, width, height, inkCount } = mask
-  if (!inkCount || width < 3 || height < 3) return 0
-
+/** Distance from every ink pixel to the nearest background pixel. */
+function distanceTransform(mask: InkMask): Float32Array {
+  const { mask: ink, width, height } = mask
   const infinity = 1e9
   const distance = new Float32Array(width * height)
   for (let i = 0; i < distance.length; i++) {
@@ -253,6 +245,19 @@ function coreRatio(mask: InkMask, capHeightPx: number): number {
       distance[index] = value
     }
   }
+  return distance
+}
+
+/**
+ * Fraction of ink pixels that sit in the thick core of a stroke. The cutoff is
+ * proportional to the line's cap height, which makes the score independent of
+ * the OCR render scale and the document's font size. Bold faces keep a much
+ * larger core than regular faces at the same size.
+ */
+export function coreRatio(mask: InkMask, capHeightPx: number): number {
+  const { mask: ink, inkCount } = mask
+  if (!inkCount || mask.width < 3 || mask.height < 3) return 0
+  const distance = distanceTransform(mask)
 
   // 1.5 px at a 24 px cap height is the calibrated cutoff. Small text keeps a
   // floor so the score does not collapse to "everything is core".
@@ -264,11 +269,9 @@ function coreRatio(mask: InkMask, capHeightPx: number): number {
   return core / inkCount
 }
 
-const BOLD_CORE_RATIO = 0.485
-
 /**
- * Classifies one OCR word. Word-level voting keeps mixed lines (a bold name in
- * a regular sentence) from turning the whole line bold.
+ * Measures one OCR word. The score is intentionally not classified here: the
+ * caller compares it with the page's word-score distribution.
  */
 export function analyzeWordStyle(
   canvas: HTMLCanvasElement,
@@ -276,11 +279,10 @@ export function analyzeWordStyle(
   capHeightPx: number,
 ): OcrWordStyle {
   const crop = readCrop(canvas, box, 2, false)
-  if (!crop) return { bold: false, coreRatio: 0 }
+  if (!crop) return { coreRatio: 0 }
   const mask = tightMask(crop)
-  if (mask.width < 3 || mask.height < 3) return { bold: false, coreRatio: 0 }
-  const ratio = coreRatio(mask, capHeightPx)
-  return { bold: ratio >= BOLD_CORE_RATIO, coreRatio: ratio }
+  if (mask.width < 3 || mask.height < 3) return { coreRatio: 0 }
+  return { coreRatio: coreRatio(mask, capHeightPx) }
 }
 
 /** Returns the best horizontal shift of the top third onto the bottom third. */

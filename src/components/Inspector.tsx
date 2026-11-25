@@ -129,8 +129,9 @@ export function Inspector() {
             <div className="empty-panel">
               <p>Nothing selected.</p>
               <span>
-                Pick a tool on the left, click a line to replace it, or drag over anything that
-                should be covered.
+                Pick a tool on the left, click a word to replace just that word, click a line's
+                empty space to replace the whole line, or drag over anything that should be
+                covered.
               </span>
             </div>
           ) : selected.kind === 'text' ? (
@@ -277,9 +278,13 @@ export function Inspector() {
               </button>
               <div className="patch-meta">
                 {selected.source === 'ocr'
-                  ? 'OCR replacement'
+                  ? selected.wordId
+                    ? 'OCR word replacement'
+                    : 'OCR line replacement'
                   : selected.source === 'native'
-                    ? 'Original text replacement'
+                    ? selected.wordId
+                      ? 'Original word replacement'
+                      : 'Original text replacement'
                     : 'Added text'}{' '}
                 · page {selected.pageIndex + 1}
                 {selected.fontFace ? ` · ${fontFaceLabel(selected.fontFace)}` : ''}
@@ -447,7 +452,8 @@ export function Inspector() {
                 </strong>
                 <span>
                   {[
-                    ocrPage.boldLines ? `${ocrPage.boldLines} bold` : '',
+                    ocrPage.boldLines ? `${ocrPage.boldLines} bold lines` : '',
+                    ocrPage.boldWords ? `${ocrPage.boldWords} bold words` : '',
                     ocrPage.italicLines ? `${ocrPage.italicLines} italic` : '',
                     ocrPage.underlinedLines ? `${ocrPage.underlinedLines} underlined` : '',
                   ]
@@ -463,8 +469,9 @@ export function Inspector() {
                 </span>
               </div>
               <div className="patch-meta">
-                Replacements use the matched face. If a line mixes weights or styles, select it
-                and use B / I / U to correct that line.
+                Replacements use the matched face. Click a word to edit only that word; click
+                between words to replace the whole line. Use B / I / U in the editor or here to
+                correct a weight or style.
               </div>
               {ocrPage.text && (
                 <pre className="ocr-text">{ocrPage.text.slice(0, 900)}</pre>
@@ -520,7 +527,13 @@ export function Inspector() {
                         : `${secure ? 'Redaction' : 'Cover'} ${patch.w.toFixed(0)} × ${patch.h.toFixed(0)} pt`}
                     </span>
                     <span className={`edit-kind ${secure ? 'secure' : ''}`}>
-                      {patch.kind === 'text' ? 'TEXT' : secure ? 'REDACT' : 'COVER'}
+                      {patch.kind === 'text'
+                        ? patch.wordId
+                          ? 'WORD'
+                          : 'TEXT'
+                        : secure
+                          ? 'REDACT'
+                          : 'COVER'}
                     </span>
                   </button>
                 )

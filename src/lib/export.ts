@@ -109,7 +109,12 @@ function makeFontGetter(doc: PDFDocument, lib: PdfLib) {
         try {
           await prepareFontkit()
           const bytes = await loadFontBytes(face, variant)
-          const font = await doc.embedFont(bytes, { subset: true })
+          // @pdf-lib/fontkit truncates Carlito's glyf table during subsetting,
+          // which leaves extractable text that renders blank. Embed Carlito
+          // whole (only the used variant, ~300 kB compressed); every other
+          // bundled face subsets cleanly.
+          const subset = face !== 'carlito'
+          const font = await doc.embedFont(bytes, { subset })
           return { font, custom: true, charset: new Set(font.getCharacterSet()) }
         } catch {
           // A font can fail to embed on unusual platforms. Export should still
@@ -167,26 +172,39 @@ async function drawTextPatches(
     )
     const font = handle.font
     const size = Math.min(200, Math.max(4, patch.fontSize ?? 12))
-    const ascent = font.heightAtSize(size, { descender: false })
+    const lines = sanitize(patch.text, handle.charset ?? undefined).split('\n')
+    // A word replacement grows into following whitespace when it can, so the
+    // patch box is the final allowed width. Shrink the face just enough to fit
+    // instead of letting a longer word run over its neighbour.
+    let drawSize = size
+    if (patch.wordId) {
+      const widest = Math.max(
+        0,
+        ...lines.map((line) => font.widthOfTextAtSize(line, size)),
+      )
+      if (widest > patch.w && widest > 0) {
+        drawSize = Math.max(1, size * (patch.w / widest))
+      }
+    }
+    const ascent = font.heightAtSize(drawSize, { descender: false })
     const top = box.y + box.height - patch.y
     const baseline = top - (patch.baseline == null ? ascent : patch.baseline)
     const color = parseColor(lib, patch.color ?? '#111827')
-    const lines = sanitize(patch.text, handle.charset ?? undefined).split('\n')
     for (const [index, line] of lines.entries()) {
-      const lineBaseline = baseline - index * size * 1.18
+      const lineBaseline = baseline - index * drawSize * 1.18
       page.drawText(line, {
         x: box.x + patch.x,
         y: lineBaseline,
-        size,
+        size: drawSize,
         font,
         color,
       })
       if (patch.underline && line) {
-        const width = font.widthOfTextAtSize(line, size)
+        const width = font.widthOfTextAtSize(line, drawSize)
         page.drawLine({
-          start: { x: box.x + patch.x, y: lineBaseline - size * 0.12 },
-          end: { x: box.x + patch.x + width, y: lineBaseline - size * 0.12 },
-          thickness: Math.max(0.5, size * 0.055),
+          start: { x: box.x + patch.x, y: lineBaseline - drawSize * 0.12 },
+          end: { x: box.x + patch.x + width, y: lineBaseline - drawSize * 0.12 },
+          thickness: Math.max(0.5, drawSize * 0.055),
           color,
         })
       }
@@ -215,13 +233,52 @@ async function addOcrLayer(
   const { font } = await getFont(undefined, 'sans')
   const padding = flattened ? 1.5 : 0
   for (const line of result.lines) {
-    const bounds = {
+    const lineBounds = {
       x: line.x - padding,
       y: line.y - padding,
       width: line.width + padding * 2,
       height: line.height + padding * 2,
     }
-    if (masks.some((mask) => intersects(mask, bounds))) continue
+
+    // When word boxes exist, write them separately so a single-word edit only
+    // removes that word from the searchable layer instead of the whole line.
+    if (line.words?.length) {
+      for (const word of line.words) {
+        const bounds = {
+          x: word.x - padding,
+          y: word.y - padding,
+          width: word.width + padding * 2,
+          height: word.height + padding * 2,
+        }
+        if (masks.some((mask) => intersects(mask, bounds))) continue
+        const text = sanitize(word.text).trim()
+        if (!text) continue
+        const baseSize = Math.min(
+          72,
+          Math.max(4, word.fontSize ?? line.height * 0.82),
+        )
+        const naturalWidth = font.widthOfTextAtSize(text, baseSize)
+        const fit =
+          naturalWidth > 0 && word.width > 0
+            ? Math.min(1.6, Math.max(0.6, word.width / naturalWidth))
+            : 1
+        const size = baseSize * fit
+        const baselineTop =
+          word.y +
+          (word.baseline == null ? word.height * 0.8 : word.baseline)
+        page.drawText(text, {
+          x: box.x + word.x,
+          y: box.y + box.height - baselineTop,
+          size,
+          font,
+          color: lib.rgb(0, 0, 0),
+          opacity: 0,
+        })
+      }
+      continue
+    }
+
+    if (masks.some((mask) => intersects(mask, lineBounds))) continue
     const text = sanitize(line.text).trim()
     if (!text) continue
     const baseSize = Math.min(72, Math.max(4, line.height * 0.82))
