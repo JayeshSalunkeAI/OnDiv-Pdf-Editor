@@ -585,8 +585,7 @@ button:disabled {
 }
 
 .patch-text.selected {
-  outline: 1.5px solid var(--accent);
-  outline-offset: 2px;
+  outline: none;
 }
 
 .whiteout-draft {
